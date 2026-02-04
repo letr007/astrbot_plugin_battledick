@@ -40,6 +40,31 @@ class Database:
         ''', (user_id, user_name, length))
         self.conn.commit()
 
+    def adjust_user_length(self, user_id: str, delta: float):
+        """调整用户长度（正数为增加，负数为减少）"""
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT length FROM user_dick_stats WHERE user_id = ?', (user_id,))
+        result = cursor.fetchone()
+        if result:
+            new_length = max(0.0, result[0] + delta)  # 长度不能为负
+        else:
+            # 用户不存在，如果 delta 为正则创建，否则忽略（长度保持0）
+            if delta > 0:
+                new_length = delta
+                cursor.execute('INSERT INTO user_dick_stats (user_id, user_name, length) VALUES (?, ?, ?)',
+                               (user_id, '', new_length))
+            else:
+                new_length = 0.0
+        if result or delta > 0:
+            cursor.execute('''
+                INSERT INTO user_dick_stats (user_id, user_name, length)
+                VALUES (?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                length = excluded.length
+            ''', (user_id, '', new_length))
+        self.conn.commit()
+        return new_length
+
     def close(self):
         if self.conn:
             self.conn.close()
