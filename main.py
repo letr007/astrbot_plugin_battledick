@@ -6,13 +6,15 @@ import os
 import asyncio
 import math
 from datetime import datetime
+import secrets
 
-@register("dickfighting", "letr", "斗鸡插件", "0.0.6")
+@register("dickfighting", "letr", "斗鸡插件", "0.0.7")
 class MyPlugin(Star):
     def __init__(self, context: Context, config=None):
         super().__init__(context)
         self.config = config or {}
         self._load_settings()
+        self._rng = secrets.SystemRandom()
         self.active_challenges = {}  # {group_id: {"data": dict, "task": Task}}
 
     def _get_config_value(self, *keys, default):
@@ -336,7 +338,7 @@ class MyPlugin(Star):
             p_p = math.pow(p_base, pow_a)
             win_prob = i_p / (i_p + p_p)
             
-            is_init_win = random.random() < win_prob
+            is_init_win = self._rng.random() < win_prob
             
             if is_init_win:
                 win_id, win_name = challenge_data["initiator_id"], challenge_data["initiator_name"]
@@ -379,5 +381,6 @@ class MyPlugin(Star):
             await self.cancel_existing_task(gid)
         if hasattr(self, "db"):
             self.db.close()
+
 
 
