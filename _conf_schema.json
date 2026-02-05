@@ -34,21 +34,28 @@
         "type": "int",
         "default": 3,
         "description": "衰减宽限天数",
-        "hint": "超过宽限天数才开始衰减"
+        "hint": "超过宽限天数才开始衰减",
+        "condition": {
+          "enable": true
+        }
       },
       "mode": {
         "type": "string",
         "default": "fixed",
         "description": "衰减方式",
         "options": ["fixed", "ratio"],
-        "labels": ["固定值", "比例值"]
+        "labels": ["固定值", "比例值"],
+        "condition": {
+          "enable": true
+        }
       },
       "fixed_cm_per_day": {
         "type": "float",
         "default": 0.5,
         "description": "每日固定衰减值（cm）",
         "condition": {
-          "decay.mode": "fixed"
+          "enable": true,
+          "mode": "fixed"
         }
       },
       "ratio_per_day": {
@@ -57,7 +64,8 @@
         "description": "每日衰减比例",
         "hint": "0-1 之间，例如 0.05 表示每天减少 5%",
         "condition": {
-          "decay.mode": "ratio"
+          "enable": true,
+          "mode": "ratio"
         }
       }
     }
@@ -74,13 +82,36 @@
         "type": "float",
         "default": 0.7,
         "description": "胜率计算指数",
-        "hint": "公式 P1 = L1^a / (L1^a + L2^a)，此处 a 为指数"
+        "hint": "公式 P1 = log(1+L1)^a / (log(1+L1)^a + log(1+L2)^a)，此处 a 为指数"
       },
       "min_length_for_probability": {
         "type": "float",
         "default": 0.1,
         "description": "胜率计算的最小长度",
         "hint": "避免长度过小导致计算异常"
+      },
+      "odds_enable": {
+        "type": "bool",
+        "default": false,
+        "description": "启用动态赔率"
+      },
+      "odds_min": {
+        "type": "float",
+        "default": 0.6,
+        "description": "动态赔率最小倍数",
+        "hint": "强者获胜时采用较小倍数",
+        "condition": {
+          "odds_enable": true
+        }
+      },
+      "odds_max": {
+        "type": "float",
+        "default": 1.6,
+        "description": "动态赔率最大倍数",
+        "hint": "弱者获胜时采用较大倍数",
+        "condition": {
+          "odds_enable": true
+        }
       }
     }
   }

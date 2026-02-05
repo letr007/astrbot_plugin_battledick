@@ -106,6 +106,29 @@ class MyPlugin(Star):
         if self.win_prob_min_length <= 0:
             self.win_prob_min_length = 0.1
 
+        self.odds_enable = bool(
+            self._get_config_value("pvp", "odds_enable", default=False)
+        )
+        self.odds_min = self._coerce_float(
+            self._get_config_value("pvp", "odds_min", default=0.6),
+            0.6,
+        )
+        self.odds_max = self._coerce_float(
+            self._get_config_value("pvp", "odds_max", default=1.6),
+            1.6,
+        )
+        if self.odds_min <= 0:
+            self.odds_min = 0.6
+        if self.odds_max <= self.odds_min:
+            self.odds_max = self.odds_min
+
+    def _calc_odds(self, win_prob: float) -> float:
+        if not self.odds_enable:
+            return 1.0
+        odds = self.odds_min + (1 - win_prob) * (self.odds_max - self.odds_min)
+        odds = max(self.odds_min, min(self.odds_max, odds))
+        return round(odds, 2)
+
     def _apply_decay(self, user_id: str, user_name: str = "") -> None:
         if not self.decay_enable:
             return
@@ -182,7 +205,7 @@ class MyPlugin(Star):
             used_count = self.db.get_daily_growth_count(uid, date_str)
             if used_count >= self.growth_daily_limit:
                 yield event.plain_result(
-                    f"今天的成长已达到上限 ({self.growth_daily_limit} 次)，请明天再来。"
+                        f"今天的锻炼已达到上限 ({self.growth_daily_limit} 次)，请明天再来。"
                 )
                 return
         
@@ -286,11 +309,13 @@ class MyPlugin(Star):
         try:
             i_len = challenge_data["initiator_length"]
             
-            # 胜率计算逻辑：使用幂函数增强弱者胜率
-            # $$P_1 = \frac{L_1^{0.7}}{L_1^{0.7} + L_2^{0.7}}$$
+            # 胜率计算逻辑：先对长度做 log 缩放，削弱超长带来的差距
+            # $$P_1 = \frac{log(1+L_1)^a}{log(1+L_1)^a + log(1+L_2)^a}$$
             pow_a = self.win_prob_power
-            i_p = math.pow(max(i_len, self.win_prob_min_length), pow_a)
-            p_p = math.pow(max(p_len, self.win_prob_min_length), pow_a)
+            i_base = math.log1p(max(i_len, self.win_prob_min_length))
+            p_base = math.log1p(max(p_len, self.win_prob_min_length))
+            i_p = math.pow(i_base, pow_a)
+            p_p = math.pow(p_base, pow_a)
             win_prob = i_p / (i_p + p_p)
             
             is_init_win = random.random() < win_prob
@@ -302,9 +327,16 @@ class MyPlugin(Star):
                 win_id, win_name = p_id, p_name
                 lose_id, lose_name = challenge_data["initiator_id"], challenge_data["initiator_name"]
 
+            winner_prob = win_prob if is_init_win else 1 - win_prob
+            odds = self._calc_odds(winner_prob)
+            effective_bet = round(bet * odds, 2)
+            max_loss = min(i_len, p_len)
+            if effective_bet > max_loss:
+                effective_bet = round(max_loss, 2)
+
             # 结算
-            self.db.adjust_user_length(win_id, bet)
-            self.db.adjust_user_length(lose_id, -bet)
+            self.db.adjust_user_length(win_id, effective_bet)
+            self.db.adjust_user_length(lose_id, -effective_bet)
             
             res_win = self.db.get_user_length(win_id)
             res_lose = self.db.get_user_length(lose_id)
@@ -312,8 +344,9 @@ class MyPlugin(Star):
             yield event.plain_result(
                 f"⚔️ 决斗结束！\n"
                 f"━━━━━━━━━━━━━━\n"
-                f"👑 胜者：{win_name} (+{bet}cm)\n"
-                f"💀 败者：{lose_name} (-{bet}cm)\n"
+                f"👑 胜者：{win_name} (+{effective_bet}cm)\n"
+                f"💀 败者：{lose_name} (-{effective_bet}cm)\n"
+                f"🎲 赔率：{odds}x\n"
                 f"━━━━━━━━━━━━━━\n"
                 f"📊 战报：{win_name}({res_win}cm) | {lose_name}({res_lose}cm)"
             )
