@@ -12,6 +12,7 @@ class MyPlugin(Star):
     def __init__(self, context: Context, config=None):
         super().__init__(context)
         self.config = config or {}
+        self._migrate_flat_config()
         self._load_settings()
         self.active_challenges = {}  # {group_id: {"data": dict, "task": Task}}
 
@@ -22,8 +23,32 @@ class MyPlugin(Star):
                 return default
             value = value.get(key)
             if value is None:
+                flat_key = ".".join(keys)
+                if isinstance(self.config, dict) and flat_key in self.config:
+                    return self.config.get(flat_key)
                 return default
         return value
+
+    def _set_config_value_by_selector(self, selector: str, value) -> None:
+        keys = selector.split(".")
+        current = self.config
+        for key in keys[:-1]:
+            if key not in current or not isinstance(current[key], dict):
+                current[key] = {}
+            current = current[key]
+        current[keys[-1]] = value
+
+    def _migrate_flat_config(self) -> None:
+        if not isinstance(self.config, dict):
+            return
+        flat_keys = [key for key in self.config.keys() if isinstance(key, str) and "." in key]
+        if not flat_keys:
+            return
+        for key in flat_keys:
+            self._set_config_value_by_selector(key, self.config.get(key))
+            del self.config[key]
+        if hasattr(self.config, "save_config"):
+            self.config.save_config()
 
     @staticmethod
     def _coerce_float(value, default):

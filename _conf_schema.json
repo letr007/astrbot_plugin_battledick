@@ -1,95 +1,80 @@
 {
-  "growth": {
-    "type": "object",
-    "items": {
-      "min_cm": {
-        "type": "float",
-        "default": 0.1,
-        "description": "单次成长最小值（cm）",
-        "hint": "增长范围为 [最小值, 最大值]"
-      },
-      "max_cm": {
-        "type": "float",
-        "default": 5.0,
-        "description": "单次成长最大值（cm）",
-        "hint": "增长范围为 [最小值, 最大值]"
-      },
-      "daily_limit": {
-        "type": "int",
-        "default": 1,
-        "description": "每日可成长次数",
-        "hint": "超过次数将提示明天再来"
-      }
+  "growth.min_cm": {
+    "type": "float",
+    "default": 0.1,
+    "description": "单次成长最小值（cm）",
+    "hint": "增长范围为 [最小值, 最大值]"
+  },
+  "growth.max_cm": {
+    "type": "float",
+    "default": 5.0,
+    "description": "单次成长最大值（cm）",
+    "hint": "增长范围为 [最小值, 最大值]"
+  },
+  "growth.daily_limit": {
+    "type": "int",
+    "default": 1,
+    "description": "每日可成长次数",
+    "hint": "超过次数将提示明天再来"
+  },
+  "decay.enable": {
+    "type": "bool",
+    "default": false,
+    "description": "启用长时间未成长衰减"
+  },
+  "decay.grace_days": {
+    "type": "int",
+    "default": 3,
+    "description": "衰减宽限天数",
+    "hint": "超过宽限天数才开始衰减",
+    "condition": {
+      "decay.enable": true
     }
   },
-  "decay": {
-    "type": "object",
-    "items": {
-      "enable": {
-        "type": "bool",
-        "default": false,
-        "description": "启用长时间未成长衰减"
-      },
-      "grace_days": {
-        "type": "int",
-        "default": 3,
-        "description": "衰减宽限天数",
-        "hint": "超过宽限天数才开始衰减",
-        "condition": {
-          "decay.enable": true
-        }
-      },
-      "mode": {
-        "type": "string",
-        "default": "fixed",
-        "description": "衰减方式",
-        "options": ["fixed", "ratio"],
-        "labels": ["固定值", "比例值"],
-        "condition": {
-          "decay.enable": true
-        }
-      },
-      "fixed_cm_per_day": {
-        "type": "float",
-        "default": 0.5,
-        "description": "每日固定衰减值（cm）",
-        "condition": {
-          "decay.enable": true,
-          "decay.mode": "fixed"
-        }
-      },
-      "ratio_per_day": {
-        "type": "float",
-        "default": 0.05,
-        "description": "每日衰减比例",
-        "hint": "0-1 之间，例如 0.05 表示每天减少 5%",
-        "condition": {
-          "decay.enable": true,
-          "decay.mode": "ratio"
-        }
-      }
+  "decay.mode": {
+    "type": "string",
+    "default": "fixed",
+    "description": "衰减方式",
+    "options": ["fixed", "ratio"],
+    "labels": ["固定值", "比例值"],
+    "condition": {
+      "decay.enable": true
     }
   },
-  "pvp": {
-    "type": "object",
-    "items": {
-      "timeout_seconds": {
-        "type": "int",
-        "default": 60,
-        "description": "挑战超时时间（秒）"
-      },
-      "win_power": {
-        "type": "float",
-        "default": 0.7,
-        "description": "胜率计算指数",
-        "hint": "公式 P1 = L1^a / (L1^a + L2^a)，此处 a 为指数"
-      },
-      "min_length_for_probability": {
-        "type": "float",
-        "default": 0.1,
-        "description": "胜率计算的最小长度",
-        "hint": "避免长度过小导致计算异常"
-      }
+  "decay.fixed_cm_per_day": {
+    "type": "float",
+    "default": 0.5,
+    "description": "每日固定衰减值（cm）",
+    "condition": {
+      "decay.enable": true,
+      "decay.mode": "fixed"
     }
+  },
+  "decay.ratio_per_day": {
+    "type": "float",
+    "default": 0.05,
+    "description": "每日衰减比例",
+    "hint": "0-1 之间，例如 0.05 表示每天减少 5%",
+    "condition": {
+      "decay.enable": true,
+      "decay.mode": "ratio"
+    }
+  },
+  "pvp.timeout_seconds": {
+    "type": "int",
+    "default": 60,
+    "description": "挑战超时时间（秒）"
+  },
+  "pvp.win_power": {
+    "type": "float",
+    "default": 0.7,
+    "description": "胜率计算指数",
+    "hint": "公式 P1 = L1^a / (L1^a + L2^a)，此处 a 为指数"
+  },
+  "pvp.min_length_for_probability": {
+    "type": "float",
+    "default": 0.1,
+    "description": "胜率计算的最小长度",
+    "hint": "避免长度过小导致计算异常"
   }
 }
