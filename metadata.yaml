@@ -3,4 +3,4 @@ display_name: BattleDick | 战弟风云 # 用于展示的名字，可以是方�
 desc: Astrbot 斗鸡插件，让dick作出回答！ # 插件简短描述
 version: v0.0.4 # 插件版本号。格式：v1.1.1 或者 v1.1
 author: letr # 作者
-repo: https://github.com/letr/astrbot_plugin_dickfighting # 插件的仓库地址
+repo: https://github.com/letr007/astrbot_plugin_dickfighting # 插件的仓库地址
