@@ -1,12 +1,12 @@
 ﻿from astrbot.api.event import filter, AstrMessageEvent
-from astrbot.api.star import Context, Star, register
+from astrbot.api.star import Context, Star, StarTools, register
 from astrbot.api import logger
 import random
-import os
 import asyncio
 import math
 from datetime import datetime
 import secrets
+from .db import Database
 
 @register("dickfighting", "letr", "斗鸡插件", "0.0.7")
 class MyPlugin(Star):
@@ -173,15 +173,8 @@ class MyPlugin(Star):
         self.db.set_last_growth_date(user_id, today_str)
 
     async def initialize(self):
-        from astrbot.core.utils.astrbot_path import get_astrbot_data_path
-        from .db import Database
-        
-        # 确保数据目录存在
-        plugin_data_path = f"{get_astrbot_data_path()}/plugin_data/{self.name}"
-        os.makedirs(plugin_data_path, exist_ok=True)
-        
-        # 初始化数据库
-        self.db = Database(f"{plugin_data_path}/data.db")
+        plugin_data_path = StarTools.get_data_dir(self.name)
+        self.db = Database(str(plugin_data_path / "data.db"))
 
     def get_gid(self, event: AstrMessageEvent):
         """安全获取群组ID标识"""
@@ -355,8 +348,8 @@ class MyPlugin(Star):
                 effective_bet = max_loss
 
             # 结算
-            self.db.adjust_user_length(win_id, effective_bet)
-            self.db.adjust_user_length(lose_id, -effective_bet)
+            self.db.adjust_user_length(win_id, effective_bet, win_name)
+            self.db.adjust_user_length(lose_id, -effective_bet, lose_name)
             
             res_win = self.db.get_user_length(win_id)
             res_lose = self.db.get_user_length(lose_id)

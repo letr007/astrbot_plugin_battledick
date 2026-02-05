@@ -12,6 +12,10 @@ class Database:
     def _round_length(value: float) -> float:
         return round(float(value), 2)
 
+    def _ensure_conn(self) -> None:
+        if self.conn is None:
+            self.conn = sqlite3.connect(self.db_path)
+
     def _init_db(self):
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.db_path)
@@ -39,6 +43,7 @@ class Database:
         self.conn.commit()
 
     def get_user_length(self, user_id: str):
+        self._ensure_conn()
         cursor = self.conn.cursor()
         cursor.execute('SELECT length FROM user_dick_stats WHERE user_id = ?', (user_id,))
         result = cursor.fetchone()
@@ -47,6 +52,7 @@ class Database:
         return 0.0
 
     def update_user_length(self, user_id: str, user_name: str, length: float):
+        self._ensure_conn()
         length = self._round_length(length)
         cursor = self.conn.cursor()
         cursor.execute('''
@@ -58,8 +64,9 @@ class Database:
         ''', (user_id, user_name, length))
         self.conn.commit()
 
-    def adjust_user_length(self, user_id: str, delta: float):
+    def adjust_user_length(self, user_id: str, delta: float, user_name: str = ""):
         """调整用户长度（正数为增加，负数为减少）"""
+        self._ensure_conn()
         cursor = self.conn.cursor()
         cursor.execute('SELECT length FROM user_dick_stats WHERE user_id = ?', (user_id,))
         result = cursor.fetchone()
@@ -69,8 +76,10 @@ class Database:
             # 用户不存在，如果 delta 为正则创建，否则忽略（长度保持0）
             if delta > 0:
                 new_length = delta
-                cursor.execute('INSERT INTO user_dick_stats (user_id, user_name, length) VALUES (?, ?, ?)',
-                               (user_id, '', new_length))
+                cursor.execute(
+                    'INSERT INTO user_dick_stats (user_id, user_name, length) VALUES (?, ?, ?)',
+                    (user_id, user_name, new_length),
+                )
             else:
                 new_length = 0.0
         new_length = self._round_length(new_length)
@@ -79,8 +88,9 @@ class Database:
                 INSERT INTO user_dick_stats (user_id, user_name, length)
                 VALUES (?, ?, ?)
                 ON CONFLICT(user_id) DO UPDATE SET
-                length = excluded.length
-            ''', (user_id, '', new_length))
+                length = excluded.length,
+                user_name = excluded.user_name
+            ''', (user_id, user_name, new_length))
         self.conn.commit()
         return new_length
 
@@ -89,6 +99,7 @@ class Database:
             self.conn.close()
 
     def get_daily_growth_count(self, user_id: str, date_str: str) -> int:
+        self._ensure_conn()
         cursor = self.conn.cursor()
         cursor.execute(
             "SELECT date, count FROM user_daily_growth WHERE user_id = ?",
@@ -103,6 +114,7 @@ class Database:
         return int(count or 0)
 
     def increment_daily_growth(self, user_id: str, date_str: str) -> int:
+        self._ensure_conn()
         cursor = self.conn.cursor()
         cursor.execute(
             "SELECT date, count FROM user_daily_growth WHERE user_id = ?",
@@ -127,6 +139,7 @@ class Database:
         return count
 
     def get_last_growth_date(self, user_id: str) -> str | None:
+        self._ensure_conn()
         cursor = self.conn.cursor()
         cursor.execute(
             "SELECT last_growth_date FROM user_growth_state WHERE user_id = ?",
@@ -138,6 +151,7 @@ class Database:
         return result[0]
 
     def set_last_growth_date(self, user_id: str, date_str: str) -> None:
+        self._ensure_conn()
         cursor = self.conn.cursor()
         cursor.execute(
             """
