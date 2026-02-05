@@ -129,6 +129,10 @@ class MyPlugin(Star):
         odds = max(self.odds_min, min(self.odds_max, odds))
         return round(odds, 2)
 
+    @staticmethod
+    def _fmt_len(value: float) -> str:
+        return f"{round(float(value), 2):.2f}"
+
     def _apply_decay(self, user_id: str, user_name: str = "") -> None:
         if not self.decay_enable:
             return
@@ -205,7 +209,7 @@ class MyPlugin(Star):
             used_count = self.db.get_daily_growth_count(uid, date_str)
             if used_count >= self.growth_daily_limit:
                 yield event.plain_result(
-                        f"今天的锻炼已达到上限 ({self.growth_daily_limit} 次)，请明天再来。"
+                        f"今天的锻炼已达到上限 ({self.growth_daily_limit} 次)，注意身体哦"
                 )
                 return
         
@@ -220,10 +224,24 @@ class MyPlugin(Star):
             self.db.increment_daily_growth(uid, date_str)
             self.db.set_last_growth_date(uid, date_str)
             
-            yield event.plain_result(f"✨ {uname} 进行了晨间锻炼！\n长度增加了 {growth_amount} cm，当前总量：{new_len} cm。")
+            yield event.plain_result(
+                f"✨ {uname} 进行了晨间锻炼！\n"
+                f"长度增加了 {self._fmt_len(growth_amount)} cm，"
+                f"当前长度：{self._fmt_len(new_len)} cm。"
+            )
         except Exception as e:
             logger.error(f"Growth Error: {e}")
             yield event.plain_result("锻炼时抽筋了，请稍后再试。")
+
+    @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
+    @filter.command("len")
+    async def show_length(self, event: AstrMessageEvent):
+        """查询当前长度"""
+        uid = event.get_sender_id()
+        uname = event.get_sender_name()
+        self._apply_decay(uid, uname)
+        length = self.db.get_user_length(uid)
+        yield event.plain_result(f"📏 {uname} 当前长度：{self._fmt_len(length)} cm")
 
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     @filter.command("pvp")
@@ -300,7 +318,7 @@ class MyPlugin(Star):
         bet = challenge_data["bet"]
 
         if p_len < bet:
-            yield event.plain_result(f"你的长度不足 {bet} cm，去锻炼一下再来吧。")
+            yield event.plain_result(f"你的长度不足 {bet} cm，去锻炼一下再来吧")
             return
 
         # 成功接战，立即取消超时提醒任务
@@ -330,9 +348,9 @@ class MyPlugin(Star):
             winner_prob = win_prob if is_init_win else 1 - win_prob
             odds = self._calc_odds(winner_prob)
             effective_bet = round(bet * odds, 2)
-            max_loss = min(i_len, p_len)
+            max_loss = round(min(i_len, p_len), 2)
             if effective_bet > max_loss:
-                effective_bet = round(max_loss, 2)
+                effective_bet = max_loss
 
             # 结算
             self.db.adjust_user_length(win_id, effective_bet)
@@ -344,11 +362,12 @@ class MyPlugin(Star):
             yield event.plain_result(
                 f"⚔️ 决斗结束！\n"
                 f"━━━━━━━━━━━━━━\n"
-                f"👑 胜者：{win_name} (+{effective_bet}cm)\n"
-                f"💀 败者：{lose_name} (-{effective_bet}cm)\n"
+                f"👑 胜者：{win_name} (+{self._fmt_len(effective_bet)}cm)\n"
+                f"💀 败者：{lose_name} (-{self._fmt_len(effective_bet)}cm)\n"
                 f"🎲 赔率：{odds}x\n"
                 f"━━━━━━━━━━━━━━\n"
-                f"📊 战报：{win_name}({res_win}cm) | {lose_name}({res_lose}cm)"
+                f"📊 战报：{win_name}({self._fmt_len(res_win)}cm) | "
+                f"{lose_name}({self._fmt_len(res_lose)}cm)"
             )
         except Exception as e:
             logger.error(f"PVP Logic Error: {e}")

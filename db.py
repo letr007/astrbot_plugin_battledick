@@ -8,6 +8,10 @@ class Database:
         self.conn = None
         self._init_db()
 
+    @staticmethod
+    def _round_length(value: float) -> float:
+        return round(float(value), 2)
+
     def _init_db(self):
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.db_path)
@@ -39,10 +43,11 @@ class Database:
         cursor.execute('SELECT length FROM user_dick_stats WHERE user_id = ?', (user_id,))
         result = cursor.fetchone()
         if result:
-            return result[0]
+            return self._round_length(result[0])
         return 0.0
 
     def update_user_length(self, user_id: str, user_name: str, length: float):
+        length = self._round_length(length)
         cursor = self.conn.cursor()
         cursor.execute('''
             INSERT INTO user_dick_stats (user_id, user_name, length) 
@@ -68,6 +73,7 @@ class Database:
                                (user_id, '', new_length))
             else:
                 new_length = 0.0
+        new_length = self._round_length(new_length)
         if result or delta > 0:
             cursor.execute('''
                 INSERT INTO user_dick_stats (user_id, user_name, length)
