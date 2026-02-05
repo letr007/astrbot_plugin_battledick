@@ -34,27 +34,20 @@
         "type": "int",
         "default": 3,
         "description": "衰减宽限天数",
-        "hint": "超过宽限天数才开始衰减",
-        "condition": {
-          "decay.enable": true
-        }
+        "hint": "超过宽限天数才开始衰减"
       },
       "mode": {
         "type": "string",
         "default": "fixed",
         "description": "衰减方式",
         "options": ["fixed", "ratio"],
-        "labels": ["固定值", "比例值"],
-        "condition": {
-          "decay.enable": true
-        }
+        "labels": ["固定值", "比例值"]
       },
       "fixed_cm_per_day": {
         "type": "float",
         "default": 0.5,
         "description": "每日固定衰减值（cm）",
         "condition": {
-          "decay.enable": true,
           "decay.mode": "fixed"
         }
       },
@@ -64,7 +57,6 @@
         "description": "每日衰减比例",
         "hint": "0-1 之间，例如 0.05 表示每天减少 5%",
         "condition": {
-          "decay.enable": true,
           "decay.mode": "ratio"
         }
       }
