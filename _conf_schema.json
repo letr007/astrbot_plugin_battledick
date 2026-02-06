@@ -39,6 +39,23 @@
       }
     }
   },
+  "milk": {
+    "type": "object",
+    "items": {
+      "milk_min_ml": {
+        "type": "float",
+        "default": 5.0,
+        "description": "单次鹿关产出金液最小值（ml）",
+        "hint": "产出范围为 [最小值, 最大值]"
+      },
+      "milk_max_ml": {
+        "type": "float",
+        "default": 30.0,
+        "description": "单次鹿关产出金液最大值（ml）",
+        "hint": "产出范围为 [最小值, 最大值]"
+      }
+    }
+  },
   "decay": {
     "type": "object",
     "items": {

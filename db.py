@@ -28,6 +28,13 @@ class Database:
             )
         ''')
         cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_milk_stats (
+                user_id TEXT PRIMARY KEY,
+                user_name TEXT,
+                milk_ml REAL DEFAULT 0
+            )
+        ''')
+        cursor.execute('''
             CREATE TABLE IF NOT EXISTS user_daily_growth (
                 user_id TEXT PRIMARY KEY,
                 date TEXT,
@@ -63,6 +70,43 @@ class Database:
             user_name = excluded.user_name
         ''', (user_id, user_name, length))
         self.conn.commit()
+
+    def get_user_milk(self, user_id: str) -> float:
+        self._ensure_conn()
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT milk_ml FROM user_milk_stats WHERE user_id = ?', (user_id,))
+        result = cursor.fetchone()
+        if result:
+            return self._round_length(result[0])
+        return 0.0
+
+    def adjust_user_milk(self, user_id: str, delta: float, user_name: str = "") -> float:
+        self._ensure_conn()
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT milk_ml FROM user_milk_stats WHERE user_id = ?', (user_id,))
+        result = cursor.fetchone()
+        if result:
+            new_milk = max(0.0, result[0] + delta)
+        else:
+            if delta > 0:
+                new_milk = delta
+                cursor.execute(
+                    'INSERT INTO user_milk_stats (user_id, user_name, milk_ml) VALUES (?, ?, ?)',
+                    (user_id, user_name, new_milk),
+                )
+            else:
+                new_milk = 0.0
+        new_milk = self._round_length(new_milk)
+        if result or delta > 0:
+            cursor.execute('''
+                INSERT INTO user_milk_stats (user_id, user_name, milk_ml)
+                VALUES (?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                milk_ml = excluded.milk_ml,
+                user_name = excluded.user_name
+            ''', (user_id, user_name, new_milk))
+        self.conn.commit()
+        return new_milk
 
     def adjust_user_length(self, user_id: str, delta: float, user_name: str = ""):
         """调整用户长度（正数为增加，负数为减少）"""
