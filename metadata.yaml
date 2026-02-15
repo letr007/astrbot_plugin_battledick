@@ -1,6 +1,6 @@
-﻿name: astrbot_plugin_dickfighting # 鎻掍欢鍞竴璇嗗埆鍚嶏紝浠?astrbot_plugin_ 鍓嶇紑寮€澶?
-display_name: BattleDick | 鎴樺紵椋庝簯 # 鐢ㄤ簬灞曠ず鐨勫悕瀛楋紝鍙互鏄柟渚夸汉绫婚槄璇荤殑鍚嶅瓧锛堥渶瑕佺増鏈?>= v4.5.0锛屼綆鐗堟湰涓嶄細鎶ラ敊锛岃鏀惧績濉啓锛?
-desc: Astrbot 鏂楅浮鎻掍欢锛岃dick浣滃嚭鍥炵瓟锛?# 鎻掍欢绠€鐭弿杩?
+﻿name: astrbot_plugin_dickfighting
+display_name: BattleDick | 斗鸡风云
+desc: Astrbot 斗鸡插件，让 dick 作出回应
 version: v0.0.9
-author: letr # 浣滆€?
-repo: https://github.com/letr007/astrbot_plugin_dickfighting # 鎻掍欢鐨勪粨搴撳湴鍧€
+author: letr
+repo: https://github.com/letr007/astrbot_plugin_dickfighting
