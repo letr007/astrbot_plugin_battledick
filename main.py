@@ -11,7 +11,7 @@ from astrbot.api.star import Context, Star, StarTools, register
 from .db import Database
 
 
-@register("dickfighting", "letr", "斗鸡插件", "0.0.9")
+@register("battledick", "letr", "斗鸡插件", "0.0.9")
 class MyPlugin(Star):
     def __init__(self, context: Context, config=None):
         super().__init__(context)
