@@ -37,6 +37,7 @@ class QQOfficialInteractionContext:
     group_member_openid: str | None = None
     button_id: str | None = None
     button_data: str | None = None
+    message_id: str | None = None
     user_name: str | None = None
 
 
@@ -57,6 +58,12 @@ def _first_non_empty_str(*values: Any) -> str | None:
         if text:
             return text
     return None
+
+
+def _get_field(value: Any, name: str, default: Any = None) -> Any:
+    if isinstance(value, dict):
+        return value.get(name, default)
+    return getattr(value, name, default)
 
 
 def _markdown_payload(content: str) -> Any:
@@ -151,15 +158,15 @@ def _build_qqofficial_text_payload(content: str) -> dict[str, Any]:
 
 def _extract_interaction_user_name(interaction: Any) -> str | None:
     for holder_name in ("member", "user", "author"):
-        holder = getattr(interaction, holder_name, None)
+        holder = _get_field(interaction, holder_name)
         if holder is None:
             continue
         name = _first_non_empty_str(
-            getattr(holder, "nick", None),
-            getattr(holder, "nickname", None),
-            getattr(holder, "username", None),
-            getattr(holder, "global_name", None),
-            getattr(holder, "name", None),
+            _get_field(holder, "nick"),
+            _get_field(holder, "nickname"),
+            _get_field(holder, "username"),
+            _get_field(holder, "global_name"),
+            _get_field(holder, "name"),
         )
         if name:
             return name
@@ -169,19 +176,21 @@ def _extract_interaction_user_name(interaction: Any) -> str | None:
 def _extract_interaction_context(interaction: Any) -> QQOfficialInteractionContext | None:
     if interaction is None:
         return None
-    data = getattr(interaction, "data", None)
-    resolved = getattr(data, "resolved", None)
-    button_id = getattr(resolved, "button_id", None)
-    button_data = getattr(resolved, "button_data", None)
+    data = _get_field(interaction, "data")
+    resolved = _get_field(data, "resolved")
+    button_id = _get_field(resolved, "button_id")
+    button_data = _get_field(resolved, "button_data")
+    message_id = _get_field(resolved, "message_id")
     return QQOfficialInteractionContext(
-        interaction_id=str(getattr(interaction, "id", "") or ""),
-        scene=getattr(interaction, "scene", None),
-        chat_type=getattr(interaction, "chat_type", None),
-        user_openid=getattr(interaction, "user_openid", None),
-        group_openid=getattr(interaction, "group_openid", None),
-        group_member_openid=getattr(interaction, "group_member_openid", None),
+        interaction_id=str(_get_field(interaction, "id", "") or ""),
+        scene=_get_field(interaction, "scene"),
+        chat_type=_get_field(interaction, "chat_type"),
+        user_openid=_get_field(interaction, "user_openid"),
+        group_openid=_get_field(interaction, "group_openid"),
+        group_member_openid=_get_field(interaction, "group_member_openid"),
         button_id=str(button_id) if button_id is not None else None,
         button_data=str(button_data) if button_data is not None else None,
+        message_id=str(message_id) if message_id is not None else None,
         user_name=_extract_interaction_user_name(interaction),
     )
 
@@ -579,6 +588,14 @@ class MyPlugin(Star):
         if not gid:
             return
 
+        logger.info(
+            "[BattleDick] 收到 QQOfficial PVP 按钮回调: interaction_id=%s, message_id=%s, scene=%s, group_openid=%s",
+            context.interaction_id,
+            context.message_id,
+            context.scene,
+            context.group_openid,
+        )
+
         try:
             await platform.client.api.on_interaction_result(context.interaction_id, 0)
         except Exception as exc:
@@ -589,8 +606,8 @@ class MyPlugin(Star):
             await self._send_qqofficial_group_text(
                 platform,
                 context.group_openid,
-                context.interaction_id,
                 self._format_qqofficial_notice("无法应战", "无法识别应战者，无法加入决斗。"),
+                msg_id=context.message_id,
             )
             return
 
@@ -606,8 +623,8 @@ class MyPlugin(Star):
         await self._send_qqofficial_group_text(
             platform,
             context.group_openid,
-            context.interaction_id,
             result_text,
+            msg_id=context.message_id,
         )
 
     def _resolve_interaction_participant_id(
@@ -638,14 +655,15 @@ class MyPlugin(Star):
         self,
         platform: Any,
         group_openid: str | None,
-        event_id: str,
         content: str,
+        *,
+        msg_id: str | None = None,
     ) -> bool:
         if not group_openid:
             logger.warning("[BattleDick] QQOfficial 按钮回复缺少 group_openid。")
             return False
         payload = _build_qqofficial_text_payload(content)
-        _add_passive_reply_context(payload, event_id=event_id)
+        _add_passive_reply_context(payload, msg_id=msg_id)
         try:
             await platform.client.api.post_group_message(group_openid=group_openid, **payload)
             return True
