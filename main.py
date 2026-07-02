@@ -157,8 +157,18 @@ def _build_qqofficial_text_payload(content: str) -> dict[str, Any]:
 
 
 def _extract_interaction_user_name(interaction: Any) -> str | None:
-    for holder_name in ("member", "user", "author"):
-        holder = _get_field(interaction, holder_name)
+    data = _get_field(interaction, "data")
+    resolved = _get_field(data, "resolved")
+    holders = []
+    for source in (interaction, resolved, data):
+        if source is None:
+            continue
+        for holder_name in ("member", "user", "author"):
+            holder = _get_field(source, holder_name)
+            if holder is not None:
+                holders.append(holder)
+
+    for holder in holders:
         if holder is None:
             continue
         name = _first_non_empty_str(
@@ -167,6 +177,7 @@ def _extract_interaction_user_name(interaction: Any) -> str | None:
             _get_field(holder, "username"),
             _get_field(holder, "global_name"),
             _get_field(holder, "name"),
+            _get_field(holder, "display_name"),
         )
         if name:
             return name
@@ -611,7 +622,17 @@ class MyPlugin(Star):
             )
             return
 
-        participant_name = context.user_name or "应战者"
+        participant_name = (
+            context.user_name
+            or self.db.get_user_profile_name(participant_id)
+            or self.db.get_user_name(participant_id)
+            or f"玩家{participant_id[-6:]}"
+        )
+        logger.info(
+            "[BattleDick] QQOfficial PVP 应战者解析: participant_id=%s, participant_name=%s",
+            participant_id,
+            participant_name,
+        )
         result_text = await self._join_pvp(
             gid,
             participant_id,
@@ -943,6 +964,20 @@ class MyPlugin(Star):
             f"📊 战报：{win_name}({self._fmt_len(res_win)}cm) | "
             f"{lose_name}({self._fmt_len(res_lose)}cm)"
         )
+
+    def _remember_sender_profile(self, event: AstrMessageEvent) -> None:
+        try:
+            user_id = event.get_sender_id()
+            user_name = event.get_sender_name()
+        except Exception as exc:
+            logger.debug(f"[BattleDick] 记录用户昵称失败：无法读取发送者信息: {exc}")
+            return
+        if user_id and user_name:
+            self.db.upsert_user_profile(str(user_id), str(user_name))
+
+    @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
+    async def remember_sender_profile(self, event: AstrMessageEvent):
+        self._remember_sender_profile(event)
 
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     @filter.command("growth")

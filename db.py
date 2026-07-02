@@ -64,6 +64,21 @@ class Database:
             )
             """
         )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                user_id TEXT PRIMARY KEY,
+                user_name TEXT
+            )
+            """
+        )
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO user_profiles (user_id, user_name)
+            SELECT user_id, user_name FROM user_dick_stats
+            WHERE user_name IS NOT NULL AND user_name != ''
+            """
+        )
         self.conn.commit()
 
     def get_user_length(self, user_id: str) -> float:
@@ -77,6 +92,46 @@ class Database:
         if not result:
             return 0.0
         return self._round_length(result[0])
+
+    def get_user_profile_name(self, user_id: str) -> str:
+        self._ensure_conn()
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT user_name FROM user_profiles WHERE user_id = ?",
+            (user_id,),
+        )
+        result = cursor.fetchone()
+        if not result or not result[0]:
+            return ""
+        return str(result[0])
+
+    def get_user_name(self, user_id: str) -> str:
+        self._ensure_conn()
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT user_name FROM user_dick_stats WHERE user_id = ?",
+            (user_id,),
+        )
+        result = cursor.fetchone()
+        if not result or not result[0]:
+            return ""
+        return str(result[0])
+
+    def upsert_user_profile(self, user_id: str, user_name: str) -> None:
+        if not user_id or not user_name:
+            return
+        self._ensure_conn()
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO user_profiles (user_id, user_name)
+            VALUES (?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+            user_name = excluded.user_name
+            """,
+            (user_id, user_name),
+        )
+        self.conn.commit()
 
     def update_user_length(self, user_id: str, user_name: str, length: float) -> None:
         self._ensure_conn()
@@ -93,6 +148,7 @@ class Database:
             (user_id, user_name, safe_length),
         )
         self.conn.commit()
+        self.upsert_user_profile(user_id, user_name)
 
     def adjust_user_length(
         self,
@@ -143,6 +199,7 @@ class Database:
             (user_id, user_name, new_milk),
         )
         self.conn.commit()
+        self.upsert_user_profile(user_id, user_name)
         return new_milk
 
     def get_daily_growth_count(self, user_id: str, date_str: str) -> int:
